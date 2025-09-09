@@ -2,11 +2,13 @@
     "pairs": [
         {
             "prefix": "a_",
-            "path": "C:/desti"
+            "path": "C:/destination1"
         },
         {
             "prefix": "b_",
-            "path": "C:/desti2"
+            "path": "C:/destination2"
         }
-    ]
+    ],
+    "remove_prefix": true,
+    "source_folder": "C:\\temp2/"
 }
