@@ -9,6 +9,7 @@
             "path": "C:/destination2"
         }
     ],
-    "remove_prefix": true,
-    "source_folder": "C:\\temp2/"
+    "remove_prefix": false,
+    "source_folder": "C:\\temp2/",
+    "auto_update": true
 }

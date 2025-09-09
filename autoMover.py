@@ -30,7 +30,8 @@ def save_settings():
             for prefix, path in entry_pairs
         ],
         "remove_prefix": remove_prefix_var.get(),
-        "source_folder": source_entry.get()
+        "source_folder": source_entry.get(),
+        "auto_update": auto_update_var.get()
     }
     try:
         with open(SETTINGS_FILE, 'w') as f:
@@ -54,6 +55,11 @@ def load_settings():
                 source_folder = settings.get("source_folder", DEFAULT_SOURCE_FOLDER)
                 source_entry.delete(0, tk.END)
                 source_entry.insert(0, source_folder)
+                
+                # Load auto-update setting
+                auto_update_var.set(settings.get("auto_update", False))
+                if auto_update_var.get():
+                    toggle_auto_update()  # Start auto-update if it was enabled
                 
                 # Clear all existing rows
                 for widget in rows_frame.winfo_children():
@@ -96,6 +102,12 @@ root.option_add('*Font', 'Arial 10')
 
 # Create checkbox variable for prefix removal setting
 remove_prefix_var = tk.BooleanVar(value=True)  # Default to removing prefix
+
+# Create variable for auto-update toggle
+auto_update_var = tk.BooleanVar(value=False)  # Default to off
+
+# Variable to store the after() job
+auto_update_job = None
 
 # Define your prefix → destination mapping
 ROUTES = {}
@@ -327,6 +339,33 @@ move_button.pack(side=tk.LEFT, padx=5)
 # Create the save settings button
 save_button = create_button(button_frame, "Save Settings", save_settings)
 save_button.pack(side=tk.LEFT, padx=5)
+
+# Add the auto-update toggle function
+def toggle_auto_update():
+    global auto_update_job
+    auto_update_var.set(not auto_update_var.get())  # Toggle the state
+    if auto_update_var.get():
+        # Start monitoring
+        auto_update_button.config(bg=COLORS['accent'])  # Visual feedback
+        status_label.config(text="Auto Update is ON - monitoring folder")
+        check_for_files()
+    else:
+        # Stop monitoring
+        auto_update_button.config(bg=COLORS['button_bg'])
+        status_label.config(text="Auto Update is OFF")
+        if auto_update_job:
+            root.after_cancel(auto_update_job)
+            auto_update_job = None
+
+def check_for_files():
+    global auto_update_job
+    if auto_update_var.get():
+        move_files()  # Run the move_files function
+        auto_update_job = root.after(5000, check_for_files)  # Check every 5 seconds
+
+# Create the auto-update toggle button
+auto_update_button = create_button(button_frame, "Auto Update", toggle_auto_update)
+auto_update_button.pack(side=tk.LEFT, padx=5)
 
 # Pack the main frame
 frame.pack(padx=20, pady=20)
