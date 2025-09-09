@@ -18,3 +18,4 @@ HOW TO USE
 - OR toggle on "Auto Update" and it will automatically move the files
 - you can add as many prefix options you like
 - you can choose to remove the prefix after moving
+![automovergif2](https://github.com/user-attachments/assets/7d77876c-4702-41a3-a9c7-94349573bbcf)
