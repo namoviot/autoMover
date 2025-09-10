@@ -14,13 +14,40 @@ def get_application_path():
         # If the application is run from a Python interpreter
         return os.path.dirname(os.path.abspath(__file__))
 
+# Font loading function
+def load_custom_font():
+    try:
+        # Font file path
+        font_path = os.path.join(get_application_path(), 'fonts', 'Roboto-Regular.ttf')
+        
+        # If running as exe, handle the bundled font
+        if getattr(sys, 'frozen', False):
+            import tempfile
+            import pkg_resources
+            
+            # Create a temporary file to extract the font
+            temp_dir = tempfile.mkdtemp()
+            temp_font_path = os.path.join(temp_dir, 'Roboto-Regular.ttf')
+            
+            # Extract font from exe
+            font_data = pkg_resources.resource_string(__name__, 'fonts/Roboto-Regular.ttf')
+            with open(temp_font_path, 'wb') as font_file:
+                font_file.write(font_data)
+            
+            font_path = temp_font_path
+        
+        # Load the font
+        from tkinter import font
+        custom_font = font.Font(family="Roboto", size=10)
+        return "Roboto"
+    except Exception as e:
+        print(f"Could not load custom font: {e}")
+        return "Arial"  # Fallback font
+
 # Constants
 SCRIPT_DIR = get_application_path()
 SETTINGS_FILE = os.path.join(SCRIPT_DIR, "automover_settings.json")
 DEFAULT_SOURCE_FOLDER = r"C:\temp"  # Default value for source folder
-
-# Add sys import at the top if not already there
-import sys
 
 def save_settings():
     """Save all prefix and path pairs to JSON file"""
@@ -96,9 +123,12 @@ COLORS = {
     'checkbox_bg': '#3b3b3b'  # Checkbox background
 }
 
+# Load custom font
+CUSTOM_FONT = load_custom_font()
+
 # Configure root window
 root.configure(bg=COLORS['bg'])
-root.option_add('*Font', 'Arial 10')
+root.option_add('*Font', f'{CUSTOM_FONT} 11')
 
 # Create checkbox variable for prefix removal setting
 remove_prefix_var = tk.BooleanVar(value=True)  # Default to removing prefix
@@ -157,7 +187,7 @@ def move_files():
     
     if total_files_moved > 0:
         # Save settings after successful moves
-        save_settings()
+        #save_settings()
         status_label.config(text=f"Moved {total_files_moved} files and saved settings")
 
 def unique_path(path):
@@ -207,9 +237,56 @@ source_entry = tk.Entry(source_frame, width=50,
 source_entry.pack(side=tk.LEFT, padx=5)
 source_entry.insert(0, DEFAULT_SOURCE_FOLDER)
 
-# Create container for rows
-rows_frame = tk.Frame(frame, bg=COLORS['bg'])
-rows_frame.pack(fill=tk.BOTH, expand=True)
+# Create container for rows with scrolling
+outer_frame = tk.Frame(frame, bg=COLORS['bg'])
+outer_frame.pack(fill=tk.BOTH, expand=True)
+
+# Set minimum width for the outer frame
+outer_frame.grid_columnconfigure(0, minsize=500)  # Minimum width of 500 pixels
+
+# Create canvas and scrollbar
+canvas = tk.Canvas(outer_frame, bg=COLORS['bg'], highlightthickness=0, width=500)
+scrollbar = tk.Scrollbar(outer_frame, orient="vertical", command=canvas.yview)
+canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+scrollbar.pack_forget()  # Initially hidden
+
+# Create the frame that will contain the rows
+rows_frame = tk.Frame(canvas, bg=COLORS['bg'])
+
+# Configure the canvas
+canvas.configure(yscrollcommand=scrollbar.set)
+
+# Function to update canvas width
+def update_canvas_width(event=None):
+    canvas.itemconfig(canvas_window, width=canvas.winfo_width())
+
+# Create a window inside the canvas to hold the rows_frame
+canvas_window = canvas.create_window((0, 0), window=rows_frame, anchor="nw")
+
+# Bind canvas resize to update width
+canvas.bind('<Configure>', update_canvas_width)
+
+# Function to update the scroll region
+def update_scroll_region(event=None):
+    canvas.configure(scrollregion=canvas.bbox("all"))
+    rows_height = rows_frame.winfo_reqheight()
+    
+    # Show/hide scrollbar based on number of rows (approximately 5 rows)
+    if rows_height > 250:  # Approximate height for 5 rows
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    else:
+        scrollbar.pack_forget()
+
+# Bind the update function to the frame
+rows_frame.bind('<Configure>', update_scroll_region)
+
+# Function to handle mouse wheel scrolling
+def on_mousewheel(event):
+    if scrollbar.winfo_ismapped():  # Only scroll if scrollbar is visible
+        canvas.yview_scroll(int(-1 * (event.delta/120)), "units")
+
+# Bind mouse wheel to the canvas
+canvas.bind_all("<MouseWheel>", on_mousewheel)
 
 # List to store entry pairs
 entry_pairs = []
@@ -222,6 +299,8 @@ def remove_row(row_frame, prefix_entry, path_entry):
     row_frame.destroy()
     # Save settings after removal
     save_settings()
+    # Update scroll region
+    update_scroll_region()
     # Don't allow removing the last row
     if not entry_pairs:
         add_row()
@@ -229,7 +308,61 @@ def remove_row(row_frame, prefix_entry, path_entry):
 def add_row():
     """Add a new row of prefix and path entries"""
     row_frame = tk.Frame(rows_frame, bg=COLORS['bg'])
-    row_frame.pack(fill=tk.X, pady=2)
+    row_frame.pack(fill=tk.X, pady=2, padx=5)
+    
+    # Create main container for entries
+    entries_container = tk.Frame(row_frame, bg=COLORS['bg'])
+    entries_container.pack(side=tk.LEFT, fill=tk.X, expand=True)
+    
+    # Create prefix container with fixed width
+    prefix_container = tk.Frame(entries_container, bg=COLORS['bg'])
+    prefix_container.pack(side=tk.LEFT, fill=tk.X, padx=(0, 10))
+    
+    # Create path container that expands
+    path_container = tk.Frame(entries_container, bg=COLORS['bg'])
+    path_container.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
+    
+    # Create prefix entry
+    prefix_label = tk.Label(prefix_container, text="Prefix:", 
+                          bg=COLORS['bg'], fg=COLORS['fg'])
+    prefix_label.pack(anchor='w')
+    prefix_entry = tk.Entry(prefix_container, width=15,
+                          bg=COLORS['entry_bg'], fg=COLORS['entry_fg'],
+                          insertbackground=COLORS['fg'])
+    prefix_entry.pack(fill=tk.X, pady=(0, 5))
+    
+    # Create path entry
+    path_label = tk.Label(path_container, text="Path:",
+                        bg=COLORS['bg'], fg=COLORS['fg'])
+    path_label.pack(anchor='w')
+    path_entry = tk.Entry(path_container,
+                        bg=COLORS['entry_bg'], fg=COLORS['entry_fg'],
+                        insertbackground=COLORS['fg'])
+    path_entry.pack(fill=tk.X, pady=(0, 5))
+    
+    # Create remove button
+    remove_button = tk.Button(
+        row_frame,
+        text="✕",
+        command=lambda: remove_row(row_frame, prefix_entry, path_entry),
+        width=2,
+        height=1,
+        fg=COLORS['fg'],
+        bg=COLORS['button_bg'],
+        activebackground=COLORS['accent'],
+        activeforeground=COLORS['fg'],
+        bd=0,
+        font=("Arial", 8, "bold")
+    )
+    remove_button.pack(side=tk.LEFT, padx=5, pady=15)
+    
+    # Store the entries
+    entry_pairs.append((prefix_entry, path_entry))
+    
+    # Update the scroll region after adding a new row
+    root.after(100, update_scroll_region)  # Small delay to ensure proper sizing
+    
+    return row_frame
     
     # Create prefix entry
     prefix_frame = tk.Frame(row_frame, bg=COLORS['bg'])
@@ -280,7 +413,14 @@ def get_values():
             for prefix, path in entry_pairs 
             if prefix.get() and path.get()]
 
+
+#bg_img = tk.PhotoImage(file = "bg.png")
+#canvas.create_image(0,0,image=bg_img,anchor= "nw")
+
 # Add initial row
+
+
+
 add_row()
 
 # Create status label

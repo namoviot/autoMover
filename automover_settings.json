@@ -2,14 +2,14 @@
     "pairs": [
         {
             "prefix": "a_",
-            "path": "C:/destination1"
+            "path": "C:/3models"
         },
         {
-            "prefix": "b_",
-            "path": "C:/destination2"
+            "prefix": "",
+            "path": ""
         }
     ],
     "remove_prefix": false,
     "source_folder": "C:\\temp2/",
-    "auto_update": true
+    "auto_update": false
 }

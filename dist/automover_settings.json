@@ -1,0 +1,23 @@
+{
+    "pairs": [
+        {
+            "prefix": "t_",
+            "path": "C:/tex"
+        },
+        {
+            "prefix": "m_",
+            "path": "C:/3dmodels"
+        },
+        {
+            "prefix": "pic_",
+            "path": "C:/Pictures"
+        },
+        {
+            "prefix": "sfx_",
+            "path": "C:/Sound"
+        }
+    ],
+    "remove_prefix": true,
+    "source_folder": "C:/temp",
+    "auto_update": false
+}
